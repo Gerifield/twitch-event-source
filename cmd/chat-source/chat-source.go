@@ -22,7 +22,7 @@ func main() {
 
 	tl := token.New(*clientID, *clientSecret)
 	log.Println("Fetching token")
-	token, err := tl.Get()
+	token, err := tl.Get([]string{"chat:read", "chat:edit"})
 	if err != nil {
 		log.Println(err)
 		return
@@ -45,7 +45,7 @@ func main() {
 	client.OnUserNoticeMessage(func(m twitch.UserNoticeMessage) {
 		cm := model.EventFrame{
 			ChannelID: m.RoomID,
-			Type:      model.ChatMessage,
+			Type:      model.UserNotice,
 			Payload:   m,
 		}
 
