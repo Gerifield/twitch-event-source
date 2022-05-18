@@ -3,12 +3,17 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	"github.com/gempir/go-twitch-irc/v3"
+
+	"github.com/gerifield/twitch-event-source/model"
+	"github.com/gerifield/twitch-event-source/queue"
+	"github.com/gerifield/twitch-event-source/token"
 )
 
 func main() {
-	channelName := flag.String("channel", "gerifield", "Twitch channel name")
+	channelName := flag.String("channel", "gerifield", "Twitch channel name (use , to separate multiple channel ids)")
 	botName := flag.String("botName", "CoderBot42", "Bot name")
 	clientID := flag.String("clientID", "", "Twitch App ClientID")
 	clientSecret := flag.String("clientSecret", "", "Twitch App clientSecret")
@@ -23,13 +28,31 @@ func main() {
 		return
 	}
 
+	q := queue.New()
+
 	client := twitch.NewClient(*botName, "oauth:"+token.AccessToken)
 
 	client.OnPrivateMessage(func(m twitch.PrivateMessage) {
-		log.Println(m)
+		cm := model.EventFrame{
+			ChannelID: m.RoomID,
+			Type:      model.ChatMessage,
+			Payload:   m,
+		}
+
+		_ = q.Add(cm)
 	})
 
-	client.Join(*channelName)
+	client.OnUserNoticeMessage(func(m twitch.UserNoticeMessage) {
+		cm := model.EventFrame{
+			ChannelID: m.RoomID,
+			Type:      model.ChatMessage,
+			Payload:   m,
+		}
+
+		_ = q.Add(cm)
+	})
+
+	client.Join(strings.Split(*channelName, ",")...)
 
 	log.Println("Connect with client")
 	err = client.Connect()
